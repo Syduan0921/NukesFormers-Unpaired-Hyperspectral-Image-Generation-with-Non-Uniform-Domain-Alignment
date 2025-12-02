@@ -37,7 +37,7 @@ from torch.utils.data import DataLoader
 
 from datasets.hyperspectral import HyperDatasetVal22, HyperDatasetVal, MixDatasetVal, HyperDatasetVal_CAVE
 from models.HSCNN_Plus import HSCNN_Plus
-from models.KAN_Ours import KANs
+from models.KAN_Ours import NukesFormers
 from models.Restormer import Restormer
 from models.hrnet import SGN
 from models.networks import MST_Plus_Plus, HDNet
@@ -88,7 +88,7 @@ def Validation(val_loader, G_A, E_A, G_B, E_B, out_root, label):
             loss_ssim = Metric.SSIM()
             rmse_loss.append(loss_rmse)
             #loss_rmse = criterion_rmse_visi(output, target)
-            hdf5storage.savemat(out_root_file, {label: torch.squeeze(output).detach().cpu().numpy()}, format='7.3')
+            # hdf5storage.savemat(out_root_file, {label: torch.squeeze(output).detach().cpu().numpy()}, format='7.3')
             hhh = 1
         # record loss
         losses_mrae.update(loss_mrae.data)
@@ -97,7 +97,7 @@ def Validation(val_loader, G_A, E_A, G_B, E_B, out_root, label):
         losses_ssim.update(loss_ssim)
         losses_sam.update(loss_sam)
 
-    return losses_mrae.avg, losses_rmse.avg, losses_psnr.avg
+    return losses_mrae.avg, losses_rmse.avg, losses_psnr.avg, losses_ssim.avg, losses_sam.avg
 
 def model_write(model_base, output_file):
     model_list = ['Ours']
@@ -107,15 +107,15 @@ def model_write(model_base, output_file):
             model_path_2 = model_base + "/latest_net_E_A.pth"
             model_path_3 = model_base + "/latest_net_G_B.pth"
             model_path_4 = model_base + "/latest_net_E_B.pth"
-            G_A = KANs(48, 48, 48, stage=1).cuda()  # create a model given opt.model and other options
-            G_B = KANs(4, 4, 4, stage=1).cuda()  # create a model given opt.model and other options
+            G_A = NukesFormers(31, 31, 31, stage=1).cuda()  # create a model given opt.model and other options
+            G_B = NukesFormers(3, 3, 3, stage=1).cuda()  # create a model given opt.model and other options
         else:
             raise ValueError("Model not found")
 
 
-        E_A = nn.Conv2d(4, 48, kernel_size=1, stride=1,
+        E_A = nn.Conv2d(3, 31, kernel_size=1, stride=1,
                         bias=False).cuda()  # create a model given opt.model and other options
-        E_B = nn.Conv2d(48, 4, kernel_size=1, stride=1,
+        E_B = nn.Conv2d(31, 3, kernel_size=1, stride=1,
                         bias=False).cuda()  # create a model given opt.model and other options
         checkpoint_G_A = torch.load(model_path, map_location='cpu')
         checkpoint_E_A = torch.load(model_path_2, map_location='cpu')
@@ -129,15 +129,17 @@ def model_write(model_base, output_file):
         print(out)
 
 def main():
-    model_base = '/home/data/dsy/code/Export-Unpaired_SR/checkpoints/9_18/grss/2025_09_18_10_53_21/'
+    model_base = '/home/data/dsy/code/Export-Unpaired_SR/checkpoints/10_14/NTIRE22_MST++/2024_10_17_17_20_16/'
     model_write(model_base, out_root)
 
 if __name__ == '__main__':
-    out_root = "/home/data/dsy/code/Export-Unpaired_SR/checkpoints/visio"
-    #trainloader = DataLoader(HyperDatasetVal_CAVE(args=""),
+    out_root = "Checkpoints/"
+    # trainloader = DataLoader(HyperDatasetVal_CAVE(args=""),
     #                        batch_size=1, num_workers=8, drop_last=True)
     # trainloader = DataLoader(MixDatasetVal(args="/home/data/dsy/data/DCD_dataset/grss/val/"),
     #                        batch_size=1, num_workers=8, drop_last=True)
-    trainloader = DataLoader(MixDatasetVal(args="/home/data/duanshiyao/DCD_dataset/grss/val/"),
-                           batch_size=1, num_workers=8, drop_last=True)
+    # trainloader = DataLoader(MixDatasetVal(args="/home/data/duanshiyao/DCD_dataset/grss/val/"),
+    #                        batch_size=1, num_workers=8, drop_last=True)
+    trainloader = DataLoader(HyperDatasetVal22(args="/home/data/dsy/data/SSROriDataset/NTIRE2022"),
+                        batch_size=1, num_workers=8, drop_last=True)
     main()
